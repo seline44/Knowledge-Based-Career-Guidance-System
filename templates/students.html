@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Students — CareerPath</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-dot"></div>
+        <span>CareerPath</span>
+      </div>
+      <nav>
+        <a href="/" class="nav-link">Home</a>
+        <a href="/students" class="nav-link active">Students</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" style="padding-bottom:0">
+      <h1>Student database</h1>
+      <p>6,000 students from the Gsling Academy dataset stored in MongoDB.</p>
+    </section>
+
+    <section class="form-section">
+      <div class="card">
+        <div class="import-row">
+          <div>
+            <h2 style="margin-bottom:4px">Import CSV</h2>
+            <p style="font-size:13px;color:#888">Load the 6,000-student CSV into MongoDB once.</p>
+          </div>
+          <button class="btn btn-small" onclick="importCSV()">Import CSV</button>
+        </div>
+        <div id="import-msg" style="display:none" class="import-msg"></div>
+      </div>
+    </section>
+
+    <section class="form-section">
+      <div class="card">
+        <div class="search-row">
+          <h2>All students</h2>
+          <input type="text" id="search" placeholder="Search by name or career..."
+            oninput="searchStudents()" style="width:220px"/>
+        </div>
+
+        <div id="students-table">
+          <p style="color:#aaa;font-size:13px;padding:.5rem 0">Loading...</p>
+        </div>
+
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Built with Python · Flask · MongoDB · Decision Trees · Knowledge Graphs</p>
+  </footer>
+
+<script>
+let currentPage = 1;
+let searchTimer = null;
+
+function importCSV() {
+  const btn = document.querySelector('.btn-small');
+  btn.textContent = 'Importing...';
+  btn.disabled = true;
+
+  fetch('/import-csv', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: 'data/student-scores-6k.csv' })
+  })
+  .then(r => r.json())
+  .then(data => {
+    const msg = document.getElementById('import-msg');
+    msg.style.display = 'block';
+    if (data.error) {
+      msg.className = 'import-msg error';
+      msg.textContent = data.error;
+    } else {
+      msg.className = 'import-msg success';
+      msg.textContent = data.message + ' (' + data.imported.toLocaleString() + ' records)';
+      loadStudents(1);
+    }
+    btn.textContent = 'Import CSV';
+    btn.disabled = false;
+  });
+}
+
+function searchStudents() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => loadStudents(1), 400);
+}
+
+function loadStudents(page) {
+  currentPage = page;
+  const search = document.getElementById('search').value;
+  fetch(`/api/students?page=${page}&search=${encodeURIComponent(search)}`)
+    .then(r => r.json())
+    .then(data => renderTable(data));
+}
+
+function renderTable(data) {
+  const container = document.getElementById('students-table');
+
+  if (!data.students || data.students.length === 0) {
+    container.innerHTML = '<p style="color:#aaa;font-size:13px;padding:.5rem 0">No students found. Import the CSV first.</p>';
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+
+  const riasecColors = { R:'#EEEDFE', I:'#E1F5EE', A:'#FAECE7', S:'#E6F1FB', E:'#FAEEDA', C:'#EAF3DE' };
+  const riasecText   = { R:'#3C3489', I:'#085041', A:'#712B13', S:'#0C447C', E:'#633806', C:'#27500A' };
+  const careerRiasec = {
+    'Software Engineer':'R','Game Developer':'R','Construction Engineer':'R',
+    'Doctor':'I','Scientist':'I','Stock Investor':'I',
+    'Artist':'A','Writer':'A','Designer':'A',
+    'Teacher':'S','Government Officer':'S','Social Network Studies':'S',
+    'Lawyer':'E','Business Owner':'E','Real Estate Developer':'E',
+    'Accountant':'C','Banker':'C'
+  };
+
+  let html = `<table class="s-table">
+    <thead><tr>
+      <th>Name</th><th>Career aspiration</th><th>RIASEC</th>
+      <th>Math</th><th>Biology</th><th>English</th><th>Study hrs</th>
+    </tr></thead><tbody>`;
+
+  data.students.forEach(s => {
+    const riasec = careerRiasec[s.career_aspiration] || '?';
+    const bg   = riasecColors[riasec] || '#f5f5f5';
+    const tc   = riasecText[riasec]   || '#555';
+    html += `<tr>
+      <td><strong>${s.first_name} ${s.last_name}</strong><br><span style="font-size:11px;color:#aaa">${s.email}</span></td>
+      <td>${s.career_aspiration}</td>
+      <td><span style="background:${bg};color:${tc};padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600">${riasec}</span></td>
+      <td>${s.scores ? s.scores.math : '-'}</td>
+      <td>${s.scores ? s.scores.biology : '-'}</td>
+      <td>${s.scores ? s.scores.english : '-'}</td>
+      <td>${s.study_hours}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+
+  const totalPages = Math.ceil(data.total / 20);
+  const pg = document.getElementById('pagination');
+  pg.innerHTML = '';
+
+  if (totalPages <= 1) return;
+
+  const info = document.createElement('span');
+  info.className = 'pg-info';
+  info.textContent = `${data.total.toLocaleString()} students · Page ${currentPage} of ${totalPages}`;
+  pg.appendChild(info);
+
+  const btnWrap = document.createElement('div');
+  btnWrap.style.cssText = 'display:flex;gap:6px';
+
+  if (currentPage > 1) {
+    const prev = document.createElement('button');
+    prev.className = 'pg-btn';
+    prev.textContent = 'Previous';
+    prev.onclick = () => loadStudents(currentPage - 1);
+    btnWrap.appendChild(prev);
+  }
+  if (currentPage < totalPages) {
+    const next = document.createElement('button');
+    next.className = 'pg-btn';
+    next.textContent = 'Next';
+    next.onclick = () => loadStudents(currentPage + 1);
+    btnWrap.appendChild(next);
+  }
+  pg.appendChild(btnWrap);
+}
+
+loadStudents(1);
+</script>
+</body>
+</html>
