@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Knowledge-Based Career Guidance System</title>
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
 </head>
 <body>
@@ -14,9 +14,15 @@
     <div class="header-inner">
       <div class="header-logo">
         <span class="logo-icon">🧠</span>
-        <h1>Knowledge-Based Career Guidance System</h1>
+        <div>
+          <h1>Knowledge-Based Career Guidance System</h1>
+          <p class="header-sub">Forward Chaining · Decision Tree · Knowledge Graph</p>
+        </div>
       </div>
-      <div class="header-dots"><span></span><span></span><span></span></div>
+      <nav class="header-nav">
+        <a href="/" class="nav-link active">Guidance</a>
+        <a href="/students" class="nav-link">Students</a>
+      </nav>
     </div>
   </header>
 
@@ -24,7 +30,7 @@
   <div id="modal-overlay" class="modal-overlay" onclick="closeModal()">
     <div class="modal" onclick="event.stopPropagation()">
       <div class="modal-header">
-        <h3>Student Profile — Saved to MongoDB</h3>
+        <h3 id="modal-title">Profile Details</h3>
         <button class="modal-close" onclick="closeModal()">✕</button>
       </div>
       <div class="modal-body" id="modal-body"><p>Loading...</p></div>
@@ -36,10 +42,10 @@
 
     <!-- LEFT: STUDENT PROFILE -->
     <aside class="panel panel-left">
-      <h2 class="panel-title">Student Profile</h2>
+      <h2 class="panel-title">🎓 Student Profile</h2>
 
       <div class="avatar-wrap">
-        <div class="avatar">🎓</div>
+        <div class="avatar" id="avatar-icon">🎓</div>
       </div>
 
       <div class="profile-field">
@@ -47,24 +53,81 @@
         <input type="text" id="name" placeholder="e.g. Alex Johnson"/>
       </div>
 
+      <!-- INTERESTS — full set matching KNOWLEDGE_GRAPH in week1 -->
       <div class="profile-field">
-        <label>Interests:</label>
+        <label>Interests <span class="field-hint">(select all that apply)</span></label>
         <div class="chips" id="chips">
-          <div class="chip" data-val="computers">Technology</div>
-          <div class="chip" data-val="research">Science</div>
-          <div class="chip" data-val="math">Mathematics</div>
-          <div class="chip" data-val="biology">Biology</div>
-          <div class="chip" data-val="art">Art & Design</div>
-          <div class="chip" data-val="helping_people">Helping People</div>
-          <div class="chip" data-val="law">Law</div>
-          <div class="chip" data-val="communication">Communication</div>
-          <div class="chip" data-val="education">Education</div>
-          <div class="chip" data-val="problem_solving">Problem Solving</div>
+          <div class="chip" data-val="computers">💻 Technology</div>
+          <div class="chip" data-val="math">📐 Mathematics</div>
+          <div class="chip" data-val="research">🔬 Research</div>
+          <div class="chip" data-val="biology">🧬 Biology</div>
+          <div class="chip" data-val="health">❤️ Health</div>
+          <div class="chip" data-val="art">🎨 Art</div>
+          <div class="chip" data-val="design">✏️ Design</div>
+          <div class="chip" data-val="writing">✍️ Writing</div>
+          <div class="chip" data-val="helping_people">🤝 Helping People</div>
+          <div class="chip" data-val="law">⚖️ Law</div>
+          <div class="chip" data-val="communication">🗣️ Communication</div>
+          <div class="chip" data-val="education">📚 Education</div>
+          <div class="chip" data-val="problem_solving">🧩 Problem Solving</div>
+          <div class="chip" data-val="nature">🌿 Nature</div>
+          <div class="chip" data-val="current_events">📰 Current Events</div>
+          <div class="chip" data-val="technology">⚡ Innovation</div>
         </div>
       </div>
 
+      <!-- SKILLS — matches required_skills in CAREER_KNOWLEDGE_BASE -->
       <div class="profile-field">
-        <label>Subject Scores:</label>
+        <label>Skills <span class="field-hint">(what are you good at?)</span></label>
+        <div class="chips skill-chips" id="skill-chips">
+          <div class="chip s-chip" data-val="math">Math</div>
+          <div class="chip s-chip" data-val="logic">Logic</div>
+          <div class="chip s-chip" data-val="programming">Programming</div>
+          <div class="chip s-chip" data-val="science">Science</div>
+          <div class="chip s-chip" data-val="communication">Communication</div>
+          <div class="chip s-chip" data-val="writing">Writing</div>
+          <div class="chip s-chip" data-val="creativity">Creativity</div>
+          <div class="chip s-chip" data-val="critical_thinking">Critical Thinking</div>
+          <div class="chip s-chip" data-val="research">Research</div>
+          <div class="chip s-chip" data-val="statistics">Statistics</div>
+          <div class="chip s-chip" data-val="visual_thinking">Visual Thinking</div>
+          <div class="chip s-chip" data-val="organization">Organization</div>
+          <div class="chip s-chip" data-val="patience">Patience</div>
+        </div>
+      </div>
+
+      <!-- TRAITS — matches ideal_traits in CAREER_KNOWLEDGE_BASE -->
+      <div class="profile-field">
+        <label>Personality Traits <span class="field-hint">(who are you?)</span></label>
+        <div class="chips trait-chips" id="trait-chips">
+          <div class="chip t-chip" data-val="analytical">Analytical</div>
+          <div class="chip t-chip" data-val="creative">Creative</div>
+          <div class="chip t-chip" data-val="empathetic">Empathetic</div>
+          <div class="chip t-chip" data-val="curious">Curious</div>
+          <div class="chip t-chip" data-val="detail_oriented">Detail-Oriented</div>
+          <div class="chip t-chip" data-val="expressive">Expressive</div>
+          <div class="chip t-chip" data-val="patient">Patient</div>
+          <div class="chip t-chip" data-val="persistent">Persistent</div>
+          <div class="chip t-chip" data-val="passionate">Passionate</div>
+          <div class="chip t-chip" data-val="calm_under_pressure">Calm Under Pressure</div>
+        </div>
+      </div>
+
+      <!-- ENVIRONMENT — matches preferred_environment in student profile -->
+      <div class="profile-field">
+        <label>Preferred Work Environment</label>
+        <div class="env-selector">
+          <button class="env-btn active" data-val="indoors" onclick="selectEnv(this)">🏠 Indoors</button>
+          <button class="env-btn" data-val="outdoors" onclick="selectEnv(this)">🌳 Outdoors</button>
+          <button class="env-btn" data-val="remote" onclick="selectEnv(this)">💻 Remote</button>
+        </div>
+      </div>
+
+      <hr class="divider"/>
+
+      <!-- SUBJECT SCORES — feeds Decision Tree -->
+      <div class="profile-field">
+        <label>Subject Scores</label>
         <div class="sliders">
           <div class="slider-row">
             <span>Math</span>
@@ -112,7 +175,7 @@
       </div>
 
       <div class="profile-field">
-        <label>Weekly Study Hours:</label>
+        <label>Weekly Study Hours</label>
         <div class="slider-row">
           <input type="range" id="study_hours" min="0" max="50" value="20"
             oninput="document.getElementById('study-val').textContent=this.value" style="flex:1"/>
@@ -120,28 +183,82 @@
         </div>
       </div>
 
+      <!-- ADDITIONAL DETAILS: feeds Decision Tree feature set -->
+      <details class="extra-details">
+        <summary class="extra-summary">⚙️ Additional Details <span class="hint-text">(used by Decision Tree)</span></summary>
+        <div class="extra-inner">
+          <div class="profile-field">
+            <label>Gender</label>
+            <div class="toggle-group">
+              <button class="toggle-btn active" data-val="0" onclick="setToggle(this,'gender-val')">Female</button>
+              <button class="toggle-btn" data-val="1" onclick="setToggle(this,'gender-val')">Male</button>
+            </div>
+            <input type="hidden" id="gender-val" value="0"/>
+          </div>
+          <div class="profile-field">
+            <label>Part-Time Job?</label>
+            <div class="toggle-group">
+              <button class="toggle-btn active" data-val="0" onclick="setToggle(this,'parttime-val')">No</button>
+              <button class="toggle-btn" data-val="1" onclick="setToggle(this,'parttime-val')">Yes</button>
+            </div>
+            <input type="hidden" id="parttime-val" value="0"/>
+          </div>
+          <div class="profile-field">
+            <label>Extracurricular Activities?</label>
+            <div class="toggle-group">
+              <button class="toggle-btn active" data-val="0" onclick="setToggle(this,'extra-val')">No</button>
+              <button class="toggle-btn" data-val="1" onclick="setToggle(this,'extra-val')">Yes</button>
+            </div>
+            <input type="hidden" id="extra-val" value="0"/>
+          </div>
+          <div class="profile-field">
+            <label>Absence Days / Month</label>
+            <div class="slider-row">
+              <input type="range" id="absence" min="0" max="30" value="2"
+                oninput="document.getElementById('abs-val').textContent=this.value" style="flex:1"/>
+              <span id="abs-val" class="val">2</span>
+            </div>
+          </div>
+        </div>
+      </details>
+
       <div class="btn-group">
-        <a href="/students" class="btn-outline">View All Students</a>
-        <button class="btn-outline btn-csv" onclick="loadCSVStudent()">🔍 Test CSV Student</button>
+        <a href="/students" class="btn-outline">📋 All Students</a>
+        <button class="btn-outline btn-csv" onclick="loadCSVStudent()">🔍 Test CSV</button>
       </div>
-      <button class="btn-suggest" onclick="getRecommendations()">Get Career Suggestions</button>
+      <button class="btn-suggest" onclick="getRecommendations()">✨ Get Career Suggestions</button>
     </aside>
 
-    <!-- CENTER: RECOMMENDATION -->
+    <!-- CENTER: RECOMMENDATION RESULTS -->
     <main class="panel-center">
       <div class="panel panel-rec" id="rec-panel">
-        <h2 class="panel-title blue">Career Recommendation</h2>
+        <h2 class="panel-title blue">🎯 Career Recommendation</h2>
 
         <!-- Placeholder -->
         <div id="rec-placeholder" class="rec-placeholder">
           <div class="placeholder-icon">🎯</div>
-          <p>Fill in your profile and click <strong>Get Career Suggestions</strong> to see your top career matches.</p>
+          <p>Fill in your profile and click <strong>Get Career Suggestions</strong> to see your personalised career matches.</p>
+          <div class="pipeline-intro">
+            <div class="pipe-step">🌳 <strong>Decision Tree</strong><br/><small>Score-based prediction</small></div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step">⚡ <strong>KG Boost</strong><br/><small>Low-confidence rescue</small></div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step">⚙️ <strong>Forward Chaining</strong><br/><small>Rule-based inference</small></div>
+            <div class="pipe-arrow">→</div>
+            <div class="pipe-step">⚖️ <strong>Conflict Resolution</strong><br/><small>Weighted confidence</small></div>
+          </div>
         </div>
 
         <!-- Loading -->
-        <div id="rec-loading" style="display:none;text-align:center;padding:60px 20px;color:#888">
-          <div style="font-size:40px;margin-bottom:12px">⏳</div>
-          <p>Analysing your profile...</p>
+        <div id="rec-loading" style="display:none;text-align:center;padding:60px 20px">
+          <div style="font-size:40px;margin-bottom:12px;animation:spin 1.5s linear infinite;display:inline-block">⏳</div>
+          <p style="color:#888;margin-bottom:16px">Running the KBS pipeline...</p>
+          <div class="loading-steps" id="loading-steps">
+            <div class="ls" id="ls1">🌳 Decision Tree prediction...</div>
+            <div class="ls" id="ls2">⚡ Knowledge Graph analysis...</div>
+            <div class="ls" id="ls3">⚙️ Forward Chaining rules...</div>
+            <div class="ls" id="ls4">⚖️ Conflict resolution...</div>
+          </div>
         </div>
 
         <!-- Results -->
@@ -154,30 +271,44 @@
               <h3 id="rec-title">Recommended Career</h3>
               <p id="rec-desc"></p>
               <div class="rec-bullets">
-                <p><strong>Key Skills:</strong> <span id="rec-skills"></span></p>
-                <p><strong>Suggested Degrees:</strong> <span id="rec-degrees"></span></p>
+                <p><strong>Key Subjects:</strong> <span id="rec-skills"></span></p>
+                <p><strong>Suggested Degree:</strong> <span id="rec-degrees"></span></p>
               </div>
             </div>
           </div>
 
-          <!-- RIASEC type -->
+          <!-- RIASEC badge -->
           <div id="rec-riasec" class="rec-riasec-wrap"></div>
 
           <!-- Confidence score -->
           <div id="rec-confidence" class="rec-confidence-wrap"></div>
 
-          <!-- Rule-based explanation -->
+          <!-- Rule-based explanation (Forward Chaining reasons) -->
           <div id="rec-rules" class="rec-rules-wrap"></div>
 
-          <!-- Match cards -->
+          <!-- Top 5 match cards -->
+          <div class="section-label">📊 All Top Matches</div>
           <div class="rec-others" id="rec-others"></div>
 
-          <button class="btn-details" onclick="viewDetails()">View Details</button>
+          <!-- PIPELINE TRACE — new section showing DT vs FC vs conflict resolution -->
+          <div class="section-label" id="pipeline-label" style="display:none">🔄 Pipeline Trace</div>
+          <div id="pipeline-trace" class="pipeline-trace-wrap"></div>
+
+          <!-- Related Careers via KG traversal — new section -->
+          <div id="related-section" style="display:none">
+            <div class="section-label">🕸️ Related Careers <span class="hint-sm">(Knowledge Graph traversal)</span></div>
+            <div id="related-careers" class="related-careers"></div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-details" onclick="viewDetails()">📋 View Saved Profile</button>
+          </div>
+          <p id="saved-note" class="saved-note"></p>
         </div>
       </div>
     </main>
 
-  </div><!-- end main-layout -->
+  </div>
 
   <footer>
     <p>Built with Python · Flask · MongoDB · Decision Trees · Knowledge Graphs &nbsp;|&nbsp; APT3020 Project</p>

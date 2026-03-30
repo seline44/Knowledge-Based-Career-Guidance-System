@@ -171,7 +171,7 @@ RIASEC_MAP = {
 }
 
 ARTISTIC_CAREERS   = {"Artist", "Writer", "Designer"}
-KG_BOOST_THRESHOLD = 0.35  # if DT confidence < 35%, apply KG boost
+KG_BOOST_THRESHOLD = 0.50  # if DT confidence < 50%, apply KG boost
 
 CAREER_COLORS = {
     "Software Engineer": "#4f46e5", "Doctor": "#dc2626",
@@ -194,26 +194,40 @@ def forward_chaining_score(interests, skills, traits):
     """
     Applies forward chaining rules to score a student against every career.
     Rules:
-      - Each matching interest = +3 points
-      - Each matching skill    = +3 points
-      - Each matching trait    = +2 points
+      - Primary interest (first in list) = +5 points
+      - Secondary interests = +3 points each
+      - Primary skill (first in list) = +5 points
+      - Secondary skills = +3 points each
+      - Primary trait (first in list) = +4 points
+      - Secondary traits = +2 points each
     Returns dict of {career: normalised_score (0-1)}
     """
     scores = {}
     for career_name, career in CAREER_KNOWLEDGE_BASE.items():
         score = 0
-        max_score = (len(career["required_interests"]) * 3 +
-                     len(career["required_skills"]) * 3 +
-                     len(career["ideal_traits"]) * 2)
-        for interest in career["required_interests"]:
+        max_score = 0
+        
+        # Score interests (primary = 5, secondary = 3)
+        for i, interest in enumerate(career["required_interests"]):
+            weight = 5 if i == 0 else 3
+            max_score += weight
             if interest in interests:
-                score += 3
-        for skill in career["required_skills"]:
+                score += weight
+        
+        # Score skills (primary = 5, secondary = 3)
+        for i, skill in enumerate(career["required_skills"]):
+            weight = 5 if i == 0 else 3
+            max_score += weight
             if skill in skills:
-                score += 3
-        for trait in career["ideal_traits"]:
+                score += weight
+        
+        # Score traits (primary = 4, secondary = 2)
+        for i, trait in enumerate(career["ideal_traits"]):
+            weight = 4 if i == 0 else 2
+            max_score += weight
             if trait in traits:
-                score += 2
+                score += weight
+        
         scores[career_name] = score / max_score if max_score > 0 else 0
     return scores
 
@@ -271,10 +285,22 @@ def knowledge_graph_boost(dt_probs, fc_scores):
         else:
             conflict_note = f"Decision Tree preferred {top_dt_career} over rules suggestion {top_fc_career}."
 
-    # Blend: DT 70% + Forward Chaining 30%
-    # If KG boost needed, shift to 50/50
-    dt_weight = 0.50 if kg_boost_applied else 0.70
-    fc_weight = 0.50 if kg_boost_applied else 0.30
+    # Adaptive blending based on DT confidence
+    # High DT confidence (>70%): DT dominates (80/20)
+    # Medium confidence (50-70%): Balanced (60/40)
+    # Low confidence (<50%): FC dominates (40/60)
+    if kg_boost_applied:
+        dt_weight = 0.40
+        fc_weight = 0.60
+    elif top_dt_conf >= 0.70:
+        dt_weight = 0.80
+        fc_weight = 0.20
+    elif top_dt_conf >= 0.50:
+        dt_weight = 0.60
+        fc_weight = 0.40
+    else:
+        dt_weight = 0.40
+        fc_weight = 0.60
 
     final = {}
     for career in CAREER_KNOWLEDGE_BASE.keys():
@@ -282,7 +308,7 @@ def knowledge_graph_boost(dt_probs, fc_scores):
         fc_p = fc_scores.get(career, 0) if fc_scores else 0
         final[career] = dt_p * dt_weight + fc_p * fc_weight
 
-    return final, conflict_note, kg_boost_applied
+    return final, conflict_note, kg_boost_applied, dt_weight, fc_weight
 
 
 # ============================================================
@@ -303,18 +329,59 @@ def get_recommendations(interests, skills, traits,
     fc_scores = forward_chaining_score(interests, skills, traits)
 
     # Week 3: Knowledge Graph blend + conflict resolution
-    final_scores, conflict_note, kg_boost = knowledge_graph_boost(dt_probs, fc_scores)
+    final_scores, conflict_note, kg_boost, dt_weight, fc_weight = knowledge_graph_boost(dt_probs, fc_scores)
 
     # Rank top 5
     sorted_careers = sorted(final_scores.items(), key=lambda x: x[1], reverse=True)[:5]
 
-    # Normalise to realistic percentage range (10–95%)
-    top_val = sorted_careers[0][1] if sorted_careers[0][1] > 0 else 1
+    # Get top 3 DT careers for pipeline trace
+    dt_top3 = sorted(dt_probs.items(), key=lambda x: x[1], reverse=True)[:3]
+    dt_top3_list = [{"name": c, "pct": round(p * 100), "riasec": RIASEC_MAP.get(c, "R")} for c, p in dt_top3]
+    
+    # Get top 3 FC careers for pipeline trace
+    fc_top3 = sorted(fc_scores.items(), key=lambda x: x[1], reverse=True)[:3]
+    fc_top3_list = [{"name": c, "pct": round(p * 100)} for c, p in fc_top3]
+    
+    # Determine conflict winner
+    top_dt_career = dt_top3[0][0] if dt_top3 else None
+    top_fc_career = fc_top3[0][0] if fc_top3 else None
+    top_final_career = sorted_careers[0][0] if sorted_careers else None
+    
+    if top_dt_career == top_fc_career:
+        conflict_winner = "agree"
+    elif top_final_career == top_fc_career:
+        conflict_winner = "rules"
+    elif kg_boost:
+        conflict_winner = "kg"
+    else:
+        conflict_winner = "dt"
+
+    # Normalise to realistic percentage range (15–95%)
+    # Use absolute score rather than relative to top
     results = []
     for career, score in sorted_careers:
-        pct = min(round((score / top_val) * 85 + 10), 95)
+        # Convert 0-1 score to 15-95% range
+        # Score of 0.5 = 55%, 0.8 = 79%, 1.0 = 95%
+        pct = min(round(score * 80 + 15), 95)
         riasec = RIASEC_MAP.get(career, "R")
         kb     = CAREER_KNOWLEDGE_BASE.get(career, {})
+        
+        # Build pipeline trace for top result
+        pipeline_trace = None
+        if career == top_final_career:
+            dt_conf = round(dt_probs.get(career, 0) * 100)
+            fc_conf = round(fc_scores.get(career, 0) * 100)
+            
+            pipeline_trace = {
+                "dt_top": top_dt_career,
+                "dt_confidence": dt_conf,
+                "fc_top": top_fc_career,
+                "fc_confidence": fc_conf,
+                "blend_weights": f"DT {int(dt_weight*100)}% + FC {int(fc_weight*100)}%",
+                "conflict_note": conflict_note or "Both systems agree on this career.",
+                "conflict_winner": conflict_winner
+            }
+        
         results.append({
             "name":          career,
             "score":         pct,
@@ -324,6 +391,9 @@ def get_recommendations(interests, skills, traits,
             "description":   kb.get("description", ""),
             "kg_boost":      kg_boost,
             "conflict_note": conflict_note,
+            "pipeline_trace": pipeline_trace,
+            "dt_top3":       dt_top3_list,
+            "fc_top3":       fc_top3_list
         })
 
     return results
