@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Career Guidance System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+
+    <!-- HERO -->
+    <div class="hero">
+        <h1>Find Your Path</h1>
+        <p>Answer a few questions and get career recommendations tailored to you.</p>
+    </div>
+
+    <!-- FORM -->
+    <div class="card">
+        <h2>Tell us about yourself</h2>
+
+        <form action="/results" method="POST">
+
+            <label>Your Name</label>
+            <input type="text" name="name" required>
+
+            <label>Math Score</label>
+            <input type="number" name="math" min="0" max="100">
+
+            <label>Biology Score</label>
+            <input type="number" name="bio" min="0" max="100">
+
+            <label>English Score</label>
+            <input type="number" name="eng" min="0" max="100">
+
+            <label>Weekly Study Hours</label>
+            <input type="number" name="hours">
+
+            <button type="submit">Get My Recommendations</button>
+
+        </form>
+    </div>
+
+</div>
+
+</body>
+</html>
